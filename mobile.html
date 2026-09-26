@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0c4a6e">
 <title>Operation Bierpanzer – Mobile</title>
@@ -29,6 +29,11 @@ html, body {
 body {
     position: fixed;
     inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    min-height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
 }
 
 canvas {
@@ -138,12 +143,15 @@ button:active {
     right: 0;
     bottom: max(14px, env(safe-area-inset-bottom));
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
+    gap: clamp(14px, 5vw, 35px);
+    width: 100%;
     padding: 0 max(14px, env(safe-area-inset-left))
              0 max(14px, env(safe-area-inset-right));
     z-index: 10;
     pointer-events: none;
+    transform: none;
 }
 
 .ctrl {
@@ -853,6 +861,20 @@ function loop() {
     draw();
     requestAnimationFrame(loop);
 }
+
+/* Verhindert versehentliches Zoomen/Gesten auf dem Handy */
+document.addEventListener("gesturestart", e => e.preventDefault(), { passive: false });
+document.addEventListener("gesturechange", e => e.preventDefault(), { passive: false });
+document.addEventListener("gestureend", e => e.preventDefault(), { passive: false });
+
+let lastTouchEnd = 0;
+document.addEventListener("touchend", e => {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) {
+        e.preventDefault();
+    }
+    lastTouchEnd = now;
+}, { passive: false });
 
 document.getElementById("startButton").addEventListener("click", startGame);
 
