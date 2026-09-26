@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0c4a6e">
+<title>Operation Bierpanzer – Mobile</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #0c4a6e;
+    color: white;
+    touch-action: none;
+    overscroll-behavior: none;
+}
+
+body {
+    position: fixed;
+    inset: 0;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Start- und Nachrichtenscreen */
+#startScreen,
+#messageScreen {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.88);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: max(20px, env(safe-area-inset-top))
+             max(20px, env(safe-area-inset-right))
+             max(20px, env(safe-area-inset-bottom))
+             max(20px, env(safe-area-inset-left));
+    z-index: 20;
+    overflow-y: auto;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+}
+
+.start-content {
+    width: min(92vw, 560px);
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 10px 0 25px;
+}
+
+.anchor {
+    font-size: clamp(60px, 18vw, 100px);
+}
+
+.start-title {
+    font-size: clamp(30px, 9vw, 50px);
+    margin: 10px 0 16px;
+    color: #fbbf24;
+    line-height: 1.05;
+}
+
+.start-subtitle {
+    font-size: clamp(20px, 6vw, 30px);
+    margin-bottom: 22px;
+}
+
+.start-text {
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.55;
+    font-size: clamp(16px, 4.5vw, 20px);
+}
+
+button {
+    min-height: 54px;
+    padding: 14px 24px;
+    font-size: clamp(18px, 5vw, 22px);
+    font-weight: bold;
+    border: none;
+    border-radius: 14px;
+    background: #22c55e;
+    color: white;
+    margin-top: 22px;
+    cursor: pointer;
+    touch-action: manipulation;
+    box-shadow: 0 4px 12px rgba(0,0,0,.3);
+}
+
+button:active {
+    transform: scale(.96);
+}
+
+/* HUD */
+#hud {
+    position: fixed;
+    top: max(10px, env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: clamp(16px, 4.5vw, 24px);
+    font-weight: bold;
+    z-index: 10;
+    background: rgba(0,0,0,0.55);
+    padding: 9px 15px;
+    border-radius: 14px;
+    text-align: center;
+    line-height: 1.25;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* Touch-Steuerung */
+#controls {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: max(14px, env(safe-area-inset-bottom));
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 max(14px, env(safe-area-inset-left))
+             0 max(14px, env(safe-area-inset-right));
+    z-index: 10;
+    pointer-events: none;
+}
+
+.ctrl {
+    width: clamp(82px, 24vw, 135px);
+    height: clamp(70px, 18vw, 105px);
+    font-size: clamp(35px, 10vw, 55px);
+    border-radius: 22px;
+    background: rgba(255,255,255,0.25);
+    border: 2px solid rgba(255,255,255,.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    pointer-events: auto;
+    box-shadow: 0 4px 15px rgba(0,0,0,.25);
+}
+
+.ctrl.pressed {
+    background: rgba(255,255,255,0.48);
+    transform: scale(.94);
+}
+
+#water {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 90px;
+    background: rgba(255,255,255,.08);
+    z-index: 1;
+    pointer-events: none;
+}
+</style>
+</head>
+
+<body>
+
+<div id="startScreen">
+    <div class="start-content">
+        <div class="anchor">⚓</div>
+
+        <h1 class="start-title">OPERATION BIERPANZER</h1>
+
+        <h2 class="start-subtitle">Geheime Panzer-Mission</h2>
+
+        <p class="start-text">
+            Willkommen Kommandant!
+            <br><br>
+            Der legendäre Bierpanzer wurde
+            mit wertvoller Fracht beladen.
+            <br><br>
+            🍺 Biervorräte<br>
+            💰 Schatzgeld<br>
+            🎁 Geheime Belohnung
+            <br><br>
+            Doch die Ladung wurde auf
+            mehrere Missionen verteilt.
+            <br><br>
+            Sammle die Vorräte ein,
+            finde alle Geheimzahlen
+            und entschlüssele am Ende
+            den Geheimcode.
+        </p>
+
+        <button id="startButton">🚢 Mission starten</button>
+    </div>
+</div>
+
+<div id="messageScreen" class="hidden"></div>
+
+<div id="hud">
+    Level: <span id="level">1</span><br>
+    <span id="levelName">Militärbasis</span><br>
+    Punkte: <span id="score">0</span>
+</div>
+
+<canvas id="game"></canvas>
+
+<div id="controls">
+    <div id="leftBtn" class="ctrl" aria-label="Nach links">◀</div>
+    <div id="rightBtn" class="ctrl" aria-label="Nach rechts">▶</div>
+</div>
+
+<div id="water"></div>
+
+<script>
+"use strict";
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const leftBtn = document.getElementById("leftBtn");
+const rightBtn = document.getElementById("rightBtn");
+const startScreen = document.getElementById("startScreen");
+const messageScreen = document.getElementById("messageScreen");
+
+let dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    canvas.width = Math.floor(window.innerWidth * dpr);
+    canvas.height = Math.floor(window.innerHeight * dpr);
+
+    canvas.style.width = window.innerWidth + "px";
+    canvas.style.height = window.innerHeight + "px";
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    resetPlayer();
+}
+
+window.addEventListener("resize", resize);
+window.addEventListener("orientationchange", () => {
+    setTimeout(resize, 100);
+});
+
+/* Spielwerte */
+const LEVEL_TARGETS = [15, 20, 25, 30];
+
+const LEVEL_NAMES = [
+    "Militärbasis",
+    "Wüstenroute",
+    "Gefahrenzone",
+    "Geheimes Depot"
+];
+
+const LEVEL_HINTS = [
+    "Ein Funker übermittelt die erste Zahl.",
+    "Ein Versorgungstrupp kennt die zweite Zahl.",
+    "Ein geheimer Funkcode enthält die dritte Zahl.",
+    "Das Depot offenbart die letzte Zahl."
+];
+
+const SECRET_NUMBERS = [1, 3, 1, 5];
+
+let foundNumbers = [];
+let level = 1;
+let score = 0;
+let running = false;
+
+const player = {
+    x: 0,
+    y: 0,
+    w: 120,
+    h: 105,
+    speed: 7
+};
+
+let objects = [];
+let clouds = [];
+let wave = 0;
+
+function resetPlayer() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+
+    player.w = Math.min(120, Math.max(90, w * 0.25));
+    player.h = player.w * 0.88;
+
+    player.speed = Math.max(5, Math.min(10, w * 0.018));
+
+    player.x = (w - player.w) / 2;
+
+    // Platz für die Touch-Buttons unten lassen
+    player.y = Math.max(100, h - 190);
+}
+
+for (let i = 0; i < 5; i++) {
+    clouds.push({
+        x: Math.random() * window.innerWidth,
+        y: 30 + Math.random() * 170,
+        speed: 0.25 + Math.random() * 0.5
+    });
+}
+
+function startGame() {
+    startScreen.classList.add("hidden");
+    level = 1;
+    foundNumbers = [];
+    startLevel();
+}
+
+function startLevel() {
+    score = 0;
+    objects = [];
+    running = true;
+
+    document.getElementById("level").innerText = level;
+    document.getElementById("levelName").innerText = LEVEL_NAMES[level - 1];
+    document.getElementById("score").innerText = score;
+
+    resetPlayer();
+}
+
+function spawn() {
+    const rnd = Math.random();
+
+    let type = "beer";
+
+    if (rnd < 0.60) {
+        type = "beer";
+    } else if (rnd < 0.80) {
+        type = "money";
+    } else {
+        type = "rock";
+    }
+
+    const size = Math.min(70, Math.max(50, window.innerWidth * 0.16));
+
+    objects.push({
+        x: Math.random() * Math.max(1, window.innerWidth - size),
+        y: -size,
+        size: size,
+        speed: 2.5 + level * 0.7
+    ,
+        type: type
+    });
+}
+
+/* Tastatur + Touch */
+let left = false;
+let right = false;
+let facingRight = true;
+
+document.addEventListener("keydown", e => {
+    if (e.key === "ArrowLeft") {
+        left = true;
+        e.preventDefault();
+    }
+
+    if (e.key === "ArrowRight") {
+        right = true;
+        e.preventDefault();
+    }
+});
+
+document.addEventListener("keyup", e => {
+    if (e.key === "ArrowLeft") left = false;
+    if (e.key === "ArrowRight") right = false;
+});
+
+/*
+ * Pointer Events funktionieren auf iPhone, Android,
+ * Tablet und Desktop. Ein Finger kann den Button
+ * gedrückt halten und der Panzer fährt weiter.
+ */
+function setupControl(button, direction) {
+    button.addEventListener("pointerdown", e => {
+        e.preventDefault();
+
+        try {
+            button.setPointerCapture(e.pointerId);
+        } catch (_) {}
+
+        if (direction === "left") {
+            left = true;
+            facingRight = false;
+        } else {
+            right = true;
+            facingRight = true;
+        }
+
+        button.classList.add("pressed");
+    });
+
+    function stop(e) {
+        e.preventDefault();
+
+        if (direction === "left") {
+            left = false;
+        } else {
+            right = false;
+        }
+
+        button.classList.remove("pressed");
+    }
+
+    button.addEventListener("pointerup", stop);
+    button.addEventListener("pointercancel", stop);
+    button.addEventListener("pointerleave", e => {
+        // Nur bei Maus verlassen; Finger bleibt über Pointer Capture aktiv.
+        if (e.pointerType === "mouse") stop(e);
+    });
+}
+
+setupControl(leftBtn, "left");
+setupControl(rightBtn, "right");
+
+function collision(a, b) {
+    return (
+        a.x < b.x + b.size &&
+        a.x + a.w > b.x &&
+        a.y < b.y + b.size &&
+        a.y + a.h > b.y
+    );
+}
+
+function levelWon() {
+    running = false;
+
+    foundNumbers.push(SECRET_NUMBERS[level - 1]);
+
+    let html = `
+        <div class="start-content">
+            <p style="margin-top:20px;">
+                ${LEVEL_HINTS[level - 1]}
+            </p>
+
+            <h1 style="margin-top:20px;">
+                ✅ Level ${level} geschafft!
+            </h1>
+
+            <h2 style="margin-top:20px;">
+                Geheime Zahl:
+            </h2>
+
+            <h1 style="color:gold;font-size:80px;margin-top:10px;">
+                ${SECRET_NUMBERS[level - 1]}
+            </h1>
+    `;
+
+    if (level < 4) {
+        html += `
+            <p style="margin-top:15px;">
+                Notiere dir die Zahl!
+            </p>
+
+            <button onclick="nextLevel()">
+                Weiter zu Level ${level + 1}
+            </button>
+        `;
+    } else {
+        html += `
+            <h1 style="font-size:clamp(30px,8vw,55px);margin-top:25px;">
+                🎉 MISSION ERFOLGREICH 🎉
+            </h1>
+
+            <p style="margin-top:20px;">
+                Kommandant,
+                <br><br>
+                du hast den Bierpanzer erfolgreich
+                durch alle Gefahrenzonen geführt.
+                <br><br>
+                Die geheime Fracht wurde gesichert.
+                <br><br>
+                Nutze nun den erhaltenen Code,
+                um die Schatzkiste zu öffnen.
+            </p>
+
+            <p style="margin-top:20px;">
+                Die gefundenen Hinweise ergeben:
+            </p>
+
+            <h1 style="
+                font-size:70px;
+                color:#22c55e;
+                margin-top:15px;
+                letter-spacing:8px;
+            ">
+                ${foundNumbers.join("")}
+            </h1>
+
+            <p style="margin-top:20px;">
+                Nutze diesen Code,
+                um die echte Schatzkiste zu öffnen.
+            </p>
+
+            <p style="margin-top:25px;">
+                🍺 🚢 💰 🎁
+            </p>
+
+            <button onclick="location.reload()">
+                Nochmal spielen
+            </button>
+
+            <p style="margin-top:20px;">
+                Gefundene Zahlen:<br><br>
+                ${foundNumbers.join(" - ")}
+            </p>
+        `;
+    }
+
+    html += `</div>`;
+
+    showMessage(html);
+}
+
+function nextLevel() {
+    level++;
+    hideMessage();
+    startLevel();
+}
+
+function levelFailed() {
+    running = false;
+
+    showMessage(`
+        <div class="start-content">
+            <h1>💥 Panzer beschädigt!</h1>
+
+            <p style="margin-top:20px;">
+                Du hast eine Bombe erwischt.
+            </p>
+
+            <button onclick="retry()">
+                Level erneut starten
+            </button>
+        </div>
+    `);
+}
+
+function retry() {
+    hideMessage();
+    startLevel();
+}
+
+function showMessage(html) {
+    messageScreen.innerHTML = html;
+    messageScreen.classList.remove("hidden");
+}
+
+function hideMessage() {
+    messageScreen.classList.add("hidden");
+}
+
+function update() {
+    if (!running) return;
+
+    if (left) {
+        player.x -= player.speed;
+        facingRight = false;
+    }
+
+    if (right) {
+        player.x += player.speed;
+        facingRight = true;
+    }
+
+    player.x = Math.max(
+        0,
+        Math.min(window.innerWidth - player.w, player.x)
+    );
+
+    if (Math.random() < 0.035) {
+        spawn();
+    }
+
+    for (let i = objects.length - 1; i >= 0; i--) {
+        const obj = objects[i];
+
+        obj.y += obj.speed;
+
+        if (collision(player, obj)) {
+            if (obj.type === "beer") {
+                score += 1;
+            }
+
+            if (obj.type === "money") {
+                score += 3;
+            }
+
+            if (obj.type === "rock") {
+                levelFailed();
+                return;
+            }
+
+            document.getElementById("score").innerText = score;
+
+            objects.splice(i, 1);
+
+            if (score >= LEVEL_TARGETS[level - 1]) {
+                levelWon();
+                return;
+            }
+
+            continue;
+        }
+
+        if (obj.y > window.innerHeight + 100) {
+            objects.splice(i, 1);
+        }
+    }
+}
+
+function draw() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    wave += 0.05;
+
+    ctx.clearRect(0, 0, width, height);
+
+    /* Himmel */
+    const sky = ctx.createLinearGradient(0, 0, 0, height);
+
+    sky.addColorStop(0, "#87ceeb");
+    sky.addColorStop(0.4, "#f7d794");
+    sky.addColorStop(0.7, "#e0a458");
+    sky.addColorStop(1, "#c97b30");
+
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, width, height);
+
+    /* Wolken */
+    clouds.forEach(cloud => {
+        cloud.x += cloud.speed;
+
+        if (cloud.x > width + 100) {
+            cloud.x = -100;
+        }
+
+        ctx.font = `${Math.min(70, width * 0.16)}px serif`;
+        ctx.fillText("☁️", cloud.x, cloud.y);
+    });
+
+    /* Sonne */
+    ctx.beginPath();
+    ctx.arc(
+        width - Math.min(80, width * 0.18),
+        90,
+        Math.min(55, width * 0.13),
+        0,
+        Math.PI * 2
+    );
+    ctx.fillStyle = "#ffd54f";
+    ctx.fill();
+
+    /* Wüstenboden */
+    ctx.fillStyle = "#d2b48c";
+    ctx.beginPath();
+    ctx.moveTo(0, height);
+
+    for (let x = 0; x <= width; x += 20) {
+        ctx.lineTo(
+            x,
+            height - 180 +
+            Math.sin((x + wave * 40) * 0.01) * 35
+        );
+    }
+
+    ctx.lineTo(width, height);
+    ctx.fill();
+
+    /* Zweite Dünenreihe */
+    ctx.fillStyle = "#c19a6b";
+    ctx.beginPath();
+    ctx.moveTo(0, height);
+
+    for (let x = 0; x <= width; x += 20) {
+        ctx.lineTo(
+            x,
+            height - 120 +
+            Math.sin((x + 150 + wave * 20) * 0.015) * 25
+        );
+    }
+
+    ctx.lineTo(width, height);
+    ctx.fill();
+
+    /* Kakteen – automatisch an Bildschirmbreite angepasst */
+    ctx.font = `${Math.min(45, width * 0.11)}px serif`;
+
+    const cactusPositions = [
+        width * 0.15,
+        width * 0.42,
+        width * 0.70,
+        width * 0.90
+    ];
+
+    cactusPositions.forEach((x, i) => {
+        ctx.fillText(
+            "🌵",
+            x,
+            height - 85 - (i % 2) * 20
+        );
+    });
+
+    /* Panzer */
+    const px = player.x;
+    const py = player.y;
+    const scale = player.w / 120;
+
+    ctx.save();
+
+    /* Rumpf */
+    ctx.fillStyle = "#6b7280";
+    ctx.beginPath();
+    ctx.moveTo(px + 10 * scale, py + 70 * scale);
+    ctx.lineTo(px + 120 * scale, py + 70 * scale);
+    ctx.lineTo(px + 105 * scale, py + 105 * scale);
+    ctx.lineTo(px + 25 * scale, py + 105 * scale);
+    ctx.closePath();
+    ctx.fill();
+
+    /* Ketten */
+    ctx.fillStyle = "#2d3748";
+    ctx.fillRect(
+        px + 15 * scale,
+        py + 95 * scale,
+        105 * scale,
+        15 * scale
+    );
+
+    /* Räder */
+    ctx.fillStyle = "#4b5563";
+
+    for (let i = 0; i < 6; i++) {
+        ctx.beginPath();
+        ctx.arc(
+            px + (28 + i * 18) * scale,
+            py + 102 * scale,
+            7 * scale,
+            0,
+            Math.PI * 2
+        );
+        ctx.fill();
+    }
+
+    /* Turm */
+    ctx.fillStyle = "#8B9A46";
+    ctx.fillRect(
+        px + 38 * scale,
+        py + 35 * scale,
+        60 * scale,
+        40 * scale
+    );
+
+    /* Kanone */
+    ctx.fillStyle = "#555";
+    ctx.fillRect(
+        px + 92 * scale,
+        py + 48 * scale,
+        65 * scale,
+        8 * scale
+    );
+
+    /* Luke */
+    ctx.fillStyle = "#556B2F";
+    ctx.beginPath();
+    ctx.arc(
+        px + 68 * scale,
+        py + 45 * scale,
+        10 * scale,
+        0,
+        Math.PI * 2
+    );
+    ctx.fill();
+
+    /* Bierladung */
+    ctx.font = `${Math.max(16, 22 * scale)}px serif`;
+
+    ctx.fillText("🍺", px + 16 * scale, py + 60 * scale);
+    ctx.fillText("🍺", px + 38 * scale, py + 60 * scale);
+    ctx.fillText("🍺", px + 60 * scale, py + 60 * scale);
+    ctx.fillText("🍺", px + 82 * scale, py + 60 * scale);
+
+    ctx.restore();
+
+    /* Staub */
+    if (left || right) {
+        for (let i = 0; i < 7; i++) {
+            ctx.beginPath();
+            ctx.fillStyle = "rgba(230,200,140,0.5)";
+
+            const dustX = facingRight
+                ? player.x - 8 - i * 7
+                : player.x + player.w + i * 7;
+
+            ctx.arc(
+                dustX,
+                player.y + player.h - 10 +
+                Math.sin(wave + i) * 4,
+                5 + Math.random() * 4,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+        }
+    }
+
+    /* Fallende Gegenstände */
+    objects.forEach(obj => {
+        ctx.font = `${Math.min(40, width * 0.10)}px serif`;
+        ctx.textAlign = "center";
+
+        let emoji = "🍺";
+
+        if (obj.type === "money") emoji = "💎";
+        if (obj.type === "rock") emoji = "💣";
+
+        ctx.fillText(
+            emoji,
+            obj.x + obj.size / 2,
+            obj.y + obj.size / 2 + 12
+        );
+    });
+
+    ctx.textAlign = "left";
+}
+
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+document.getElementById("startButton").addEventListener("click", startGame);
+
+resize();
+loop();
+</script>
+
+</body>
+</html>
