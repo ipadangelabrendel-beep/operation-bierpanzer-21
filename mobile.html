@@ -51,8 +51,8 @@ canvas {
 
 canvas {
     display: block;
-    width: 100%;
-    height: 100%;
+    width: auto;
+    height: auto;
 }
 
 .hidden {
@@ -152,14 +152,14 @@ button:active {
 /* Touch-Steuerung */
 #controls {
     position: fixed;
-    left: 0;
-    right: 0;
+    left: 50%;
     bottom: max(14px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
     display: flex;
     justify-content: center;
     align-items: center;
     gap: clamp(18px, 6vw, 35px);
-    padding: 0 14px;
+    width: max-content;
     z-index: 10;
     pointer-events: none;
 }
@@ -260,57 +260,24 @@ const rightBtn = document.getElementById("rightBtn");
 const startScreen = document.getElementById("startScreen");
 const messageScreen = document.getElementById("messageScreen");
 
-let dpr = Math.min(window.devicePixelRatio || 1, 2);
-
 let gameWidth = window.innerWidth;
 let gameHeight = window.innerHeight;
 
-function getViewportSize() {
-    // visualViewport verhindert, dass die iPhone-Browserleiste das Spiel
-    // bei einem Rand-Tap plötzlich neu skaliert.
-    const vv = window.visualViewport;
-    return {
-        width: Math.round(vv ? vv.width : window.innerWidth),
-        height: Math.round(vv ? vv.height : window.innerHeight)
-    };
+function resize() {
+    gameWidth = window.innerWidth;
+    gameHeight = window.innerHeight;
+
+    canvas.width = gameWidth;
+    canvas.height = gameHeight;
+
+    resetPlayer();
 }
 
-function resize(force = false) {
-    const viewport = getViewportSize();
+resize();
 
-    // Kleine Höhenänderungen durch Ein-/Ausblenden der Safari-Leiste
-    // sollen nicht das komplette Spiel neu aufbauen.
-    const widthChanged = Math.abs(viewport.width - gameWidth) > 2;
-    const heightChanged = Math.abs(viewport.height - gameHeight) > 80;
-
-    if (!force && !widthChanged && !heightChanged) return;
-
-    gameWidth = viewport.width;
-    gameHeight = viewport.height;
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-
-    canvas.width = Math.floor(gameWidth * dpr);
-    canvas.height = Math.floor(gameHeight * dpr);
-
-    canvas.style.width = gameWidth + "px";
-    canvas.style.height = gameHeight + "px";
-
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    if (running) {
-        player.x = Math.max(0, Math.min(gameWidth - player.w, player.x));
-        player.y = Math.max(100, gameHeight - 190);
-    } else {
-        resetPlayer();
-    }
-}
-
-window.addEventListener("resize", () => resize(false));
-if (window.visualViewport) {
-    window.visualViewport.addEventListener("resize", () => resize(false));
-}
+window.addEventListener("resize", resize);
 window.addEventListener("orientationchange", () => {
-    setTimeout(() => resize(true), 150);
+    setTimeout(resize, 150);
 });
 
 /* Spielwerte */
