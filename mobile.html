@@ -29,24 +29,6 @@ html, body {
 body {
     position: fixed;
     inset: 0;
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
-    user-select: none;
-    -webkit-user-select: none;
-}
-
-/* Safari/iPhone: unbeabsichtigtes Zoomen und Browser-Gesten verhindern */
-html {
-    touch-action: none;
-    -webkit-touch-callout: none;
-    overscroll-behavior: none;
-}
-
-canvas {
-    touch-action: none;
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-touch-callout: none;
 }
 
 canvas {
@@ -156,10 +138,10 @@ button:active {
     right: 0;
     bottom: max(14px, env(safe-area-inset-bottom));
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
-    gap: clamp(18px, 6vw, 35px);
-    padding: 0 14px;
+    padding: 0 max(14px, env(safe-area-inset-left))
+             0 max(14px, env(safe-area-inset-right));
     z-index: 10;
     pointer-events: none;
 }
@@ -262,74 +244,43 @@ const messageScreen = document.getElementById("messageScreen");
 
 let dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-let gameWidth = window.innerWidth;
-let gameHeight = window.innerHeight;
-
-function getViewportSize() {
-    // visualViewport verhindert, dass die iPhone-Browserleiste das Spiel
-    // bei einem Rand-Tap plötzlich neu skaliert.
-    const vv = window.visualViewport;
-    return {
-        width: Math.round(vv ? vv.width : window.innerWidth),
-        height: Math.round(vv ? vv.height : window.innerHeight)
-    };
-}
-
-function resize(force = false) {
-    const viewport = getViewportSize();
-
-    // Kleine Höhenänderungen durch Ein-/Ausblenden der Safari-Leiste
-    // sollen nicht das komplette Spiel neu aufbauen.
-    const widthChanged = Math.abs(viewport.width - gameWidth) > 2;
-    const heightChanged = Math.abs(viewport.height - gameHeight) > 80;
-
-    if (!force && !widthChanged && !heightChanged) return;
-
-    gameWidth = viewport.width;
-    gameHeight = viewport.height;
+function resize() {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    canvas.width = Math.floor(gameWidth * dpr);
-    canvas.height = Math.floor(gameHeight * dpr);
+    canvas.width = Math.floor(window.innerWidth * dpr);
+    canvas.height = Math.floor(window.innerHeight * dpr);
 
-    canvas.style.width = gameWidth + "px";
-    canvas.style.height = gameHeight + "px";
+    canvas.style.width = window.innerWidth + "px";
+    canvas.style.height = window.innerHeight + "px";
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    if (running) {
-        player.x = Math.max(0, Math.min(gameWidth - player.w, player.x));
-        player.y = Math.max(100, gameHeight - 190);
-    } else {
-        resetPlayer();
-    }
+    resetPlayer();
 }
 
-window.addEventListener("resize", () => resize(false));
-if (window.visualViewport) {
-    window.visualViewport.addEventListener("resize", () => resize(false));
-}
+window.addEventListener("resize", resize);
 window.addEventListener("orientationchange", () => {
-    setTimeout(() => resize(true), 150);
+    setTimeout(resize, 100);
 });
 
 /* Spielwerte */
-const LEVEL_TARGETS = [15, 20, 25];
+const LEVEL_TARGETS = [15, 20, 25, 30];
 
 const LEVEL_NAMES = [
     "Militärbasis",
     "Wüstenroute",
+    "Gefahrenzone",
     "Geheimes Depot"
 ];
 
 const LEVEL_HINTS = [
     "Ein Funker übermittelt die erste Zahl.",
     "Ein Versorgungstrupp kennt die zweite Zahl.",
+    "Ein geheimer Funkcode enthält die dritte Zahl.",
     "Das Depot offenbart die letzte Zahl."
 ];
 
-const SECRET_NUMBERS = [1, 3, 9];
-const FINAL_CODE = "139";
+const SECRET_NUMBERS = [1, 3, 1, 5];
 
 let foundNumbers = [];
 let level = 1;
@@ -349,8 +300,8 @@ let clouds = [];
 let wave = 0;
 
 function resetPlayer() {
-    const w = gameWidth;
-    const h = gameHeight;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
 
     player.w = Math.min(120, Math.max(90, w * 0.25));
     player.h = player.w * 0.88;
@@ -365,7 +316,7 @@ function resetPlayer() {
 
 for (let i = 0; i < 5; i++) {
     clouds.push({
-        x: Math.random() * gameWidth,
+        x: Math.random() * window.innerWidth,
         y: 30 + Math.random() * 170,
         speed: 0.25 + Math.random() * 0.5
     });
@@ -403,10 +354,10 @@ function spawn() {
         type = "rock";
     }
 
-    const size = Math.min(70, Math.max(50, gameWidth * 0.16));
+    const size = Math.min(70, Math.max(50, window.innerWidth * 0.16));
 
     objects.push({
-        x: Math.random() * Math.max(1, gameWidth - size),
+        x: Math.random() * Math.max(1, window.innerWidth - size),
         y: -size,
         size: size,
         speed: 2.5 + level * 0.7
@@ -436,20 +387,6 @@ document.addEventListener("keyup", e => {
     if (e.key === "ArrowLeft") left = false;
     if (e.key === "ArrowRight") right = false;
 });
-
-/* iPhone Safari: Pinch-/Doppelzoom und System-Gesten im Spiel blockieren. */
-document.addEventListener("gesturestart", e => e.preventDefault(), { passive: false });
-document.addEventListener("gesturechange", e => e.preventDefault(), { passive: false });
-document.addEventListener("gestureend", e => e.preventDefault(), { passive: false });
-
-let lastTouchEnd = 0;
-document.addEventListener("touchend", e => {
-    const now = Date.now();
-    if (now - lastTouchEnd <= 300) {
-        e.preventDefault();
-    }
-    lastTouchEnd = now;
-}, { passive: false });
 
 /*
  * Pointer Events funktionieren auf iPhone, Android,
@@ -498,15 +435,6 @@ function setupControl(button, direction) {
 setupControl(leftBtn, "left");
 setupControl(rightBtn, "right");
 
-// Im eigentlichen Spiel darf ein Fingerwischen nicht die Seite zoomen/verschieben.
-document.addEventListener("touchmove", e => {
-    const target = e.target;
-    const inScrollableScreen = target.closest("#startScreen, #messageScreen");
-    if (!inScrollableScreen) {
-        e.preventDefault();
-    }
-}, { passive: false });
-
 function collision(a, b) {
     return (
         a.x < b.x + b.size &&
@@ -540,7 +468,7 @@ function levelWon() {
             </h1>
     `;
 
-    if (level < 3) {
+    if (level < 4) {
         html += `
             <p style="margin-top:15px;">
                 Notiere dir die Zahl!
@@ -569,7 +497,7 @@ function levelWon() {
             </p>
 
             <p style="margin-top:20px;">
-                Die gefundenen Hinweise ergeben den Geheimcode:
+                Die gefundenen Hinweise ergeben:
             </p>
 
             <h1 style="
@@ -578,7 +506,7 @@ function levelWon() {
                 margin-top:15px;
                 letter-spacing:8px;
             ">
-                ${FINAL_CODE}
+                ${foundNumbers.join("")}
             </h1>
 
             <p style="margin-top:20px;">
@@ -659,7 +587,7 @@ function update() {
 
     player.x = Math.max(
         0,
-        Math.min(gameWidth - player.w, player.x)
+        Math.min(window.innerWidth - player.w, player.x)
     );
 
     if (Math.random() < 0.035) {
@@ -697,15 +625,15 @@ function update() {
             continue;
         }
 
-        if (obj.y > gameHeight + 100) {
+        if (obj.y > window.innerHeight + 100) {
             objects.splice(i, 1);
         }
     }
 }
 
 function draw() {
-    const width = gameWidth;
-    const height = gameHeight;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
 
     wave += 0.05;
 
